@@ -1,0 +1,163 @@
+name: Process inbox ZIP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "_inbox/*.zip"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: process-inbox
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    name: Validate and extract ZIPs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate and extract
+        id: extract
+        run: |
+          python3 - <<'PY'
+          import glob, os, re, shutil, stat, sys, zipfile
+
+          ALLOWED_DIRS = {"app", "docs", "gradle", "scripts", "handovers", "tests"}
+          FORBIDDEN_PARTS = {".git", ".github", "node_modules", ".next", "__MACOSX"}
+          FORBIDDEN_SUFFIX = (".jks", ".keystore")
+          NAME_RE = re.compile(r"^[a-z0-9-]+\.zip$")
+          MAX_ZIP = 50 * 1024 * 1024
+          MAX_TOTAL = 200 * 1024 * 1024
+          MAX_FILES = 2000
+
+          def problems(path):
+              errs = []
+              name = os.path.basename(path)
+              if not NAME_RE.match(name):
+                  errs.append("file name must be lowercase letters, numbers and hyphens, ending .zip")
+              if os.path.getsize(path) > MAX_ZIP:
+                  errs.append("zip is larger than 50 MB")
+              try:
+                  z = zipfile.ZipFile(path)
+              except zipfile.BadZipFile:
+                  return errs + ["not a valid zip file"]
+              with z:
+                  infos = z.infolist()
+                  if not infos:
+                      errs.append("zip is empty")
+                  if len(infos) > MAX_FILES:
+                      errs.append("more than %d entries" % MAX_FILES)
+                  if sum(i.file_size for i in infos) > MAX_TOTAL:
+                      errs.append("uncompressed size is over 200 MB")
+                  bad = z.testzip()
+                  if bad:
+                      errs.append("corrupt entry: " + bad)
+                  for i in infos:
+                      n = i.filename
+                      mode = (i.external_attr >> 16) & 0xFFFF
+                      if stat.S_ISLNK(mode):
+                          errs.append("symlink not allowed: " + n)
+                          continue
+                      if "\\" in n or n.startswith("/") or re.match(r"^[A-Za-z]:", n):
+                          errs.append("unsafe path: " + n)
+                          continue
+                      parts = [p for p in n.split("/") if p != ""]
+                      if not parts:
+                          continue
+                      if any(p in ("..", ".") for p in parts):
+                          errs.append("path traversal: " + n)
+                          continue
+                      if any(p in FORBIDDEN_PARTS for p in parts):
+                          errs.append("forbidden folder (.git, .github, node_modules, .next): " + n)
+                          continue
+                      base = parts[-1]
+                      if base.startswith(".env") and base != ".env.example":
+                          errs.append(".env files are not allowed: " + n)
+                          continue
+                      if base.lower().endswith(FORBIDDEN_SUFFIX):
+                          errs.append("keystore files are not allowed: " + n)
+                          continue
+                      if base.startswith(".git") and base not in (".gitignore", ".gitattributes"):
+                          errs.append("git control files are not allowed: " + n)
+                          continue
+                      if (len(parts) > 1 or i.is_dir()) and parts[0] not in ALLOWED_DIRS:
+                          errs.append("top-level folder not allowed (%s): %s" % (parts[0], n))
+              return errs
+
+          def extract(path):
+              root = os.path.realpath(".")
+              with zipfile.ZipFile(path) as z:
+                  for i in z.infolist():
+                      target = os.path.realpath(os.path.join(root, i.filename))
+                      if target != root and not target.startswith(root + os.sep):
+                          raise RuntimeError("unsafe path " + i.filename)
+                      if i.is_dir():
+                          os.makedirs(target, exist_ok=True)
+                          continue
+                      os.makedirs(os.path.dirname(target), exist_ok=True)
+                      with z.open(i) as src, open(target, "wb") as dst:
+                          shutil.copyfileobj(src, dst)
+                      mode = (i.external_attr >> 16) & 0o777
+                      os.chmod(target, 0o755 if mode & 0o111 else 0o644)
+
+          os.makedirs("_failed", exist_ok=True)
+          extracted, rejected = [], []
+          for path in sorted(glob.glob("_inbox/*.zip")):
+              name = os.path.basename(path)
+              errs = problems(path)
+              if errs:
+                  rejected.append(name)
+                  shutil.move(path, os.path.join("_failed", name))
+                  with open(os.path.join("_failed", name + ".txt"), "w") as f:
+                      f.write("\n".join(errs[:50]) + "\n")
+                  print("REJECTED %s:" % name)
+                  for e in errs[:50]:
+                      print("  - " + e)
+              else:
+                  extract(path)
+                  os.remove(path)
+                  extracted.append(name)
+                  print("EXTRACTED " + name)
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a") as f:
+                  f.write("Extracted: %s\n\nRejected: %s\n" % (", ".join(extracted) or "none", ", ".join(rejected) or "none"))
+          out = os.environ.get("GITHUB_OUTPUT")
+          if out:
+              with open(out, "a") as f:
+                  f.write("extracted=%s\n" % str(bool(extracted)).lower())
+                  f.write("rejected=%s\n" % str(bool(rejected)).lower())
+          if not extracted and not rejected:
+              print("No ZIP files found in _inbox/")
+          PY
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+            exit 0
+          fi
+          git commit -m "Process inbox ZIP(s)"
+          git push
+
+      - name: Start Android CI
+        if: steps.extract.outputs.extracted == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run android-build.yml --ref "${GITHUB_REF_NAME}" || echo "Could not start Android CI (is android-build.yml in .github/workflows?)"
+
+      - name: Fail if a ZIP was rejected
+        if: steps.extract.outputs.rejected == 'true'
+        run: |
+          echo "A ZIP was rejected. See the _failed folder for the reason."
+          exit 1

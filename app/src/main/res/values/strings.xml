@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app_name and theme_color are generated from app-config.properties -->
+    <string name="retry">Retry</string>
+    <string name="error_message">The page could not be loaded. Check your internet connection and try again.</string>
+    <string name="ssl_error_message">A secure connection could not be established, so the page was not loaded.</string>
+    <string name="link_blocked">This link is blocked by the app\'s navigation settings.</string>
+    <string name="no_app_for_link">No app can open this link.</string>
+    <string name="download_started">Download started</string>
+    <string name="download_unsupported">This download is not supported.</string>
+    <string name="downloads_disabled">Downloads are turned off in this app.</string>
+</resources>

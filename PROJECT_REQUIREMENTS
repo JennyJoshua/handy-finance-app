@@ -1,0 +1,145 @@
+# Project Requirements — Android WebView App Template
+
+## 1. Purpose
+
+Create a reusable Android application template for converting existing
+websites and public GitHub web projects into customized Android apps.
+
+The project must support a workflow based on an Android phone, GitHub,
+and GitHub Actions, without requiring Android Studio on the phone.
+
+## 2. Supported Application Types
+
+### Mode A: Remote Website
+Load an existing HTTPS website inside an Android WebView.
+
+### Mode B: Bundled Website
+Package HTML, CSS, JavaScript, and other frontend assets inside the APK.
+
+Use AndroidX WebKit WebViewAssetLoader for safe local-content loading
+where appropriate.
+
+### Mode C: Hybrid Application
+Bundle the frontend while connecting to an online backend, API,
+authentication service, or database.
+
+Document all internet and backend requirements.
+
+## 3. Customization
+
+The template must support configuration of:
+
+- Application name
+- Android application ID
+- App icon
+- Splash screen
+- Start URL
+- Website loading mode
+- Allowed website hosts
+- Theme colours
+- JavaScript and storage settings
+- External link handling
+
+Customization must be documented and reliable.
+
+## 4. WebView Features
+
+Implement and test:
+
+- Website loading progress
+- Android back-button navigation
+- Network error handling
+- Appropriate website navigation restrictions
+- Cookie and storage support when required
+- File uploads and downloads where supported
+- External browser and application links
+- Appropriate handling of login redirects
+- Optional offline functionality when supported by the website
+
+## 5. Security
+
+- Use HTTPS by default.
+- Do not bypass TLS certificate errors.
+- Do not enable cleartext HTTP by default.
+- Avoid unrestricted JavaScript-to-native bridges.
+- Avoid unsafe local-file access settings.
+- Restrict navigation to trusted hosts where practical.
+- Never commit API keys, passwords, or signing credentials.
+- Review third-party licences before copying or redistributing code.
+
+## 6. Android Build System
+
+The repository must include:
+
+- Complete Android project source
+- settings.gradle.kts
+- build.gradle.kts
+- App-level Gradle configuration
+- gradle.properties
+- gradlew
+- gradlew.bat
+- gradle/wrapper/gradle-wrapper.properties
+- gradle/wrapper/gradle-wrapper.jar
+- AndroidManifest.xml
+- Required resources and source files
+
+All required Gradle wrapper files must be committed to GitHub.
+
+Do not assume that uploading files from a phone preserves
+the gradle directory or JAR files.
+
+## 7. GitHub Actions
+
+Provide automated workflows to:
+
+- Validate the project structure
+- Run available tests
+- Build the Android debug APK
+- Report build failures
+- Upload the APK as a downloadable artifact
+
+The basic workflow should not require paid services or private API keys.
+
+## 8. Documentation
+
+Create:
+
+- README.md
+- PROJECT_REQUIREMENTS.md
+- DECISIONS.md
+- CHANGELOG.md
+- REVIEW.md
+- handoff.md
+- docs/SETUP.md
+- docs/WEBVIEW_CONFIGURATION.md
+- docs/WEBSITE_IMPORT_GUIDE.md
+- docs/TROUBLESHOOTING.md
+
+## 9. Testing and Acceptance Criteria
+
+The template is complete only when:
+
+1. All required Android and Gradle files are present.
+2. GitHub Actions builds the debug APK successfully.
+3. The APK can be downloaded and installed on an Android device.
+4. A remote HTTPS website loads correctly.
+5. Back navigation works correctly.
+6. Network errors are handled appropriately.
+7. Bundled mode uses a safe local-content loading approach.
+8. Configuration instructions are tested.
+9. Known limitations are documented.
+10. The final review records actual test results.
+
+## 10. Scope Limitations
+
+A WebView wrapper does not automatically convert arbitrary desktop
+applications into Android applications.
+
+Bundling a website frontend does not automatically bundle its backend
+or make the application fully functional offline.
+
+Some websites require additional work for authentication, payments,
+file handling, camera access, or other browser-dependent features.
+
+Review the licence and permissions of every third-party project
+before modifying, packaging, or distributing it.

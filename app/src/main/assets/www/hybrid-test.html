@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hybrid test</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>Hybrid, upload and download test</h1>
+    <p>Use with <code>LOAD_MODE=HYBRID</code> and
+       <code>ALLOWED_HOSTS=github.com,codeload.github.com</code>. Needs internet.</p>
+
+    <h2>1. Backend call</h2>
+    <p>This page (served from the APK) calls a public HTTPS API.</p>
+    <button id="api-btn">Call api.github.com</button>
+    <pre id="api-out">Not run yet.</pre>
+
+    <h2>2. Link to an allowed host</h2>
+    <p><a href="https://github.com/JennyJoshua/android-webview-app-template">Open the repo on github.com</a>
+       &mdash; should open inside the app; back button returns here.</p>
+
+    <h2>3. Link to a host that is not allowed</h2>
+    <p><a href="https://example.org/">Open example.org</a>
+       &mdash; should open in your browser app, not inside this app.</p>
+
+    <h2>4. File upload</h2>
+    <p><input type="file" id="file-in"></p>
+    <p id="file-out">No file chosen.</p>
+
+    <h2>5. File download</h2>
+    <p><a href="https://github.com/JennyJoshua/android-webview-app-template/archive/refs/heads/main.zip">Download repo ZIP</a>
+       &mdash; should show a "Download started" message, then a notification, and the file appears in Downloads.</p>
+
+    <p><a href="index.html">Home</a></p>
+  </main>
+  <script>
+    document.getElementById('api-btn').addEventListener('click', function () {
+      var out = document.getElementById('api-out');
+      out.textContent = 'Loading...';
+      fetch('https://api.github.com/zen')
+        .then(function (r) { return r.text().then(function (t) { out.textContent = 'HTTP ' + r.status + ': ' + t.slice(0, 200); }); })
+        .catch(function (e) { out.textContent = 'FAILED: ' + e; });
+    });
+    document.getElementById('file-in').addEventListener('change', function (e) {
+      var f = e.target.files[0];
+      document.getElementById('file-out').textContent = f ? 'Chosen: ' + f.name + ' (' + f.size + ' bytes)' : 'No file chosen.';
+    });
+  </script>
+</body>
+</html>

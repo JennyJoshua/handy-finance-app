@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bundled website</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>Bundled website works</h1>
+    <p>This page is stored inside the APK and served over
+       <code>https://appassets.androidplatform.net/</code> by WebViewAssetLoader.</p>
+    <p>Replace everything in <code>app/src/main/assets/www/</code> with your own site,
+       and set <code>LOAD_MODE=BUNDLED</code> in <code>app-config.properties</code>.</p>
+    <p id="storage">Checking local storage...</p>
+    <p><a href="about.html">Second page (back button test)</a></p>
+    <p><a href="hybrid-test.html">Hybrid / upload / download test page</a></p>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
